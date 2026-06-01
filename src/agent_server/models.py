@@ -135,7 +135,9 @@ class Skill(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
+    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     source_run_id: Mapped[UUID | None] = mapped_column(ForeignKey("runs.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -144,6 +146,7 @@ class Skill(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Setting(Base):

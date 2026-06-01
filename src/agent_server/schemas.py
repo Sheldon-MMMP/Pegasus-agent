@@ -277,22 +277,33 @@ class CreateMemoryRequest(BaseModel):
 class ListMemoriesResponse(BaseModel):
     memories: list[MemoryDTO]
 
+class SkillStatus(StrEnum):
+    active = "active" #数据库有记录，文件也存在，可以被 agent 使用。
+    missing = "missing" #数据库有记录，但文件不存在。
+    disabled = "disabled" #用户禁用，不参与 skill selection。
+    error = "error" #文件存在，但解析失败或内容不合法。
+
 class SkillDTO(BaseModel):
     id: UUID
     name: str
     description: str
-    content: str
+    file_path: str
+    content_hash: str
+    status: SkillStatus
     version: int
     source_run_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
+    last_checked_at: datetime | None = None
 
+class GetSkillResponse(BaseModel):
+    skill: SkillDTO
+    content: str | None = None
 
 class CreateSkillRequest(BaseModel):
     name: str
     description: str
     content: str
-
 
 class ListSkillsResponse(BaseModel):
     skills: list[SkillDTO]
