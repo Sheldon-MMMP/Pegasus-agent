@@ -1,12 +1,13 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from agent_server.db import get_db
 from agent_server.models import Memory
 from agent_server.schemas import CreateMemoryRequest, ListMemoriesResponse, MemoryDTO
+from agent_server.services.memories import create_memory as create_memory_service
+from agent_server.services.memories import list_memories as list_memories_service
 
 router = APIRouter(prefix="/api/memories", tags=["memories"])
 
@@ -27,9 +28,7 @@ def memory_to_dto(memory: Memory) -> MemoryDTO:
 
 @router.get("", response_model=ListMemoriesResponse)
 def list_memories(db:DbSession) -> ListMemoriesResponse:
-    memories = db.scalars(
-        select(Memory).order_by(Memory.created_at.desc())
-    ).all()
+    memories = list_memories_service(db)
 
     return ListMemoriesResponse(
         memories = [memory_to_dto(memory) for memory in memories]
@@ -38,14 +37,5 @@ def list_memories(db:DbSession) -> ListMemoriesResponse:
 
 @router.post("", response_model=MemoryDTO)
 def create_memory(request: CreateMemoryRequest,db:DbSession) -> MemoryDTO:
-    memory = Memory(
-        kind=request.kind.value,
-        content=request.content,
-        source_run_id=None,
-        source_message_id=None,
-    )
-    db.add(memory)
-    db.commit()
-    db.refresh(memory)
-
+    memory = create_memory_service(db, request)
     return memory_to_dto(memory)

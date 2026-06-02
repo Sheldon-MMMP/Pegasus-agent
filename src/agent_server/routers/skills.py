@@ -1,16 +1,18 @@
-import hashlib
-from datetime import UTC, datetime
 from typing import Annotated
-from uuid import uuid4, UUID
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, exists
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from agent_server.db import get_db
 from agent_server.models import Skill
 from agent_server.schemas import CreateSkillRequest, ListSkillsResponse, SkillDTO, SkillStatus, GetSkillResponse
 from pathlib import Path
+
+from agent_server.routers.errors import raise_http_error_from_service_error
+from agent_server.services.exceptions import ServiceError
+from agent_server.services.skills import create_skill as create_skill_service
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 
@@ -74,46 +76,9 @@ def get_skill(skill_id: UUID, db: DbSession) -> GetSkillResponse:
 
 @router.post("", response_model=SkillDTO)
 def create_skill(request: CreateSkillRequest,db: DbSession) -> SkillDTO:
-    now = datetime.now(UTC)
-
-    is_exist = db.scalar(select(exists().where(Skill.name == request.name)))
-
-    if is_exist:
-        raise HTTPException(status_code=409, detail="Skill is already created.")
-
-    skill_file_path = Path.cwd() / ".skills" / request.name / "SKILL.md"
-
-    if skill_file_path.exists():
-        raise HTTPException(status_code=409, detail="Skill directory already exists.")
-
-    skill_content = f"""---
-name: {request.name}
-description: {request.description}
-version: 1
----
-
-{request.content}
-"""
-
-    skill_file_path.parent.mkdir(parents=True, exist_ok=False)
-    skill_file_path.write_text(skill_content, encoding="utf-8")
-
-    skill = Skill(
-        id=uuid4(),
-        name=request.name,
-        description=request.description,
-        file_path=f".skills/{request.name}/SKILL.md",
-        content_hash=hashlib.sha256(skill_content.encode("utf-8")).hexdigest(),
-        status=SkillStatus.active.value ,
-        version=1,
-        source_run_id=None,
-        created_at=now,
-        updated_at=now,
-        last_checked_at=now,
-    )
-
-    db.add(skill)
-    db.commit()
-    db.refresh(skill)
+    try:
+        skill = create_skill_service(db=db, request=request)
+    except ServiceError as exc:
+        raise_http_error_from_service_error(exc)
 
     return skill_to_dto(skill)

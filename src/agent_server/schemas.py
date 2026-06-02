@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Role(StrEnum):
@@ -301,7 +301,10 @@ class GetSkillResponse(BaseModel):
     content: str | None = None
 
 class CreateSkillRequest(BaseModel):
-    name: str
+    name: str = Field(
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        description="Skill name must use lowercase letters, numbers, and hyphens.",
+    )
     description: str
     content: str
 
