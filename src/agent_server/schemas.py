@@ -6,6 +6,10 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+SKILL_NAME_PATTERN = r"^[a-z0-9]+(-[a-z0-9]+)*$"
+SKILL_NAME_MAX_LENGTH = 80
+
+
 class Role(StrEnum):
     user = "user"
     assistant = "assistant"
@@ -202,10 +206,23 @@ class ChatProviderDTO(BaseModel):
     model: str
 
 
+class ChatProvider(BaseModel):
+    base_url: str
+    api_key: str | None = None
+    model: str
+
+
 class EmbeddingProviderDTO(BaseModel):
     base_url: str
     api_key_configured: bool
     model: str
+
+class EmbeddingProvider(BaseModel):
+    base_url: str
+    api_key: bool | None = None
+    model: str
+    model: str
+
 
 
 class MilvusDTO(BaseModel):
@@ -227,6 +244,13 @@ class SettingsDTO(BaseModel):
     milvus: MilvusDTO
     workspace: WorkspaceDTO
 
+
+class Settings(BaseModel):
+    approval_mode: ApprovalMode
+    chat_provider: ChatProvider
+    embedding_provider: EmbeddingProvider
+    milvus: MilvusDTO
+    workspace: WorkspaceDTO
 
 class UpdateProviderRequest(BaseModel):
     base_url: str | None = None
@@ -302,11 +326,23 @@ class GetSkillResponse(BaseModel):
 
 class CreateSkillRequest(BaseModel):
     name: str = Field(
-        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
-        description="Skill name must use lowercase letters, numbers, and hyphens.",
+        min_length=1,
+        max_length=SKILL_NAME_MAX_LENGTH,
+        pattern=SKILL_NAME_PATTERN,
     )
-    description: str
+    description: str = Field(min_length=1)
     content: str
+
+class UpdateSkillRequest(BaseModel):
+    name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=SKILL_NAME_MAX_LENGTH,
+        pattern=SKILL_NAME_PATTERN,
+    )
+    description: str | None = Field(default=None, min_length=1)
+    content: str | None = None
+    status: Literal["active", "disabled"] | None = None
 
 class ListSkillsResponse(BaseModel):
     skills: list[SkillDTO]

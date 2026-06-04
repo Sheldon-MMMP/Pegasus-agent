@@ -1,8 +1,13 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
+
+from agent_server.deps import DbSession
+from agent_server.models import Session, Message, Run
 from agent_server.schemas import (
     ApprovalMode,
+    ErrorDTO,
     GetSessionResponse,
     ListSessionsResponse,
     MessageDTO,
@@ -11,74 +16,72 @@ from agent_server.schemas import (
     RunStatus,
     SessionDTO,
 )
+from agent_server.services.exceptions import ServiceError
 
 
-def list_sessions() -> ListSessionsResponse:
-    now = datetime.now(UTC)
-    workspace_id = uuid4()
+def session_to_dto(session: Session) -> SessionDTO:
+    return SessionDTO(
+        id=session.id,
+        title=session.title,
+        workspace_id=session.workspace_id,
+        created_at=session.created_at,
+        updated_at=session.updated_at,
+        last_message_at=session.last_message_at,
+    )
 
+def message_to_dto(message: Message) -> MessageDTO:
+    return MessageDTO(
+        id=message.id,
+        session_id=message.session_id,
+        run_id=message.run_id,
+        role=Role(message.role),
+        content=message.content,
+        metadata=message.message_metadata,
+        created_at=message.created_at,
+    )
+
+def run_to_dto(run: Run) -> RunDTO:
+    return RunDTO(
+        id=run.id,
+        session_id=run.session_id,
+        status=RunStatus(run.status),
+        approval_mode=ApprovalMode(run.approval_mode),
+        model=run.model,
+        error=ErrorDTO.model_validate(run.error) if run.error is not None else None,
+        created_at=run.created_at,
+        started_at=run.started_at,
+        completed_at=run.completed_at,
+    )
+
+def list_sessions(db: DbSession) -> ListSessionsResponse:
+    sessions = db.execute(
+        select(Session)
+        .order_by(Session.updated_at.desc())
+    ).scalars().all()
     return ListSessionsResponse(
-        sessions=[
-            SessionDTO(
-                id=uuid4(),
-                title="First agent session",
-                workspace_id=workspace_id,
-                created_at=now,
-                updated_at=now,
-                last_message_at=None,
-            )
-        ]
+        sessions=[session_to_dto(session) for session in sessions]
     )
 
 
-def get_session(session_id: UUID) -> GetSessionResponse:
-    now = datetime.now(UTC)
-    workspace_id = uuid4()
-    run_id = uuid4()
+def get_session(session_id: UUID,db: DbSession) -> GetSessionResponse:
+    session = db.get(Session, session_id)
+    if session is None:
+        raise ServiceError("session_not_found", "Session not found.")
 
-    session = SessionDTO(
-        id=session_id,
-        title="First agent session",
-        workspace_id=workspace_id,
-        created_at=now,
-        updated_at=now,
-        last_message_at=now,
-    )
+    messages = db.execute(
+        select(Message)
+        .where(Message.session_id == session_id)
+        .order_by(Message.created_at)
+    ).scalars().all()
 
-    user_message = MessageDTO(
-        id=uuid4(),
-        session_id=session_id,
-        run_id=None,
-        role=Role.user,
-        content="Hello agent",
-        metadata=None,
-        created_at=now,
-    )
-
-    run = RunDTO(
-        id=run_id,
-        session_id=session_id,
-        status=RunStatus.completed,
-        approval_mode=ApprovalMode.sensitive,
-        model="gpt-4.1-mini",
-        error=None,
-        created_at=now,
-        started_at=now,
-        completed_at=now,
-    )
-
-    assistant_message = MessageDTO(
-        id=uuid4(),
-        session_id=session_id,
-        run_id=run_id,
-        role=Role.assistant,
-        content="Hello! I am ready.",
-        metadata={"model": "gpt-4.1-mini"},
-        created_at=now,
-    )
+    runs = db.execute(
+        select(Run)
+        .where(Run.session_id == session_id)
+        .order_by(Run.created_at)
+    ).scalars().all()
 
     return GetSessionResponse(
-        session=session,
-        messages=[user_message, assistant_message],
-        runs=[run],
+        session=session_to_dto(session),
+        messages=[message_to_dto(message) for message in messages],
+        runs=[run_to_dto(run) for run in runs],
     )
