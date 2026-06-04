@@ -127,7 +127,7 @@ def get_raw_settings(db: Session) -> dict:
         get_settings(db)
         setting = db.get(Setting, APP_SETTINGS_KEY)
 
-    return setting.value
+    return deepcopy(setting.value)
 
 def apply_non_workspace_settings_update(
         settings: SettingsDTO,

@@ -219,11 +219,8 @@ class EmbeddingProviderDTO(BaseModel):
 
 class EmbeddingProvider(BaseModel):
     base_url: str
-    api_key: bool | None = None
+    api_key: str | None = None
     model: str
-    model: str
-
-
 
 class MilvusDTO(BaseModel):
     uri: str
