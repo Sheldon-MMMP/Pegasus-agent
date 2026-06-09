@@ -15,7 +15,7 @@ export function createApiRouter(): Router {
   router.get("/sessions", asyncHandler(sessionController.listSessions));
   router.get("/sessions/:sessionId", asyncHandler(sessionController.getSession));
   router.post("/chat/runs", asyncHandler(chatController.createRun));
-  router.get("/chat/runs/:runId/stream", asyncHandler(chatController.streamRun));
+  router.get("/chat/runs/:run_id/stream", asyncHandler(chatController.streamRun));
   router.get("/memories", asyncHandler(memoryController.listMemories));
   router.post("/memories", asyncHandler(memoryController.createMemory));
   router.get("/skills", asyncHandler(skillController.listSkills));

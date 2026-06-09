@@ -39,6 +39,11 @@ npm run dev
 The API listens on `http://localhost:8000` by default. Override it with `PORT`
 and configure PostgreSQL with `DATABASE_URL`.
 
+OpenAPI documentation is available while the server is running:
+
+- Swagger UI: `http://localhost:8000/docs`
+- OpenAPI JSON: `http://localhost:8000/openapi.json`
+
 ## Commands
 
 ```bash

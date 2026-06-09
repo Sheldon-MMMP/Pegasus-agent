@@ -15,7 +15,7 @@ export async function createRun(request: Request, response: Response): Promise<v
 }
 
 export async function streamRun(request: Request, response: Response): Promise<void> {
-  const runId = uuidSchema.parse(request.params.runId);
+  const runId = uuidSchema.parse(request.params.run_id);
   response.setHeader("Content-Type", "text/event-stream");
   response.setHeader("Cache-Control", "no-cache");
   response.setHeader("Connection", "keep-alive");
